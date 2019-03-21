@@ -357,6 +357,30 @@ function do_project_data_page( ) {
 <?php
 }
 
+class ApiResource extends Util\ApiResource {
+	
+	private $_is_ok = true;
+	
+	public function __construct( $resource = '', $headers = [] ) {
+		$headers['x-api-key'] = get_option('turp_api_key');
+		$base = get_option('turp_api_url');
+		parent::__construct( $base.$resource, $headers );
+		
+		if ( filter_var($base, FILTER_VALIDATE_URL, FILTER_FLAG_SCHEME_REQUIRED|FILTER_FLAG_HOST_REQUIRED|FILTER_FLAG_PATH_REQUIRED) === FALSE ) {
+			Util\admin_notice( "There's a problem with the API endpoint '$base', change the plugin options.");
+			$this->_is_ok = false;
+		}
+		if ( strlen($headers['x-api-key']) < 20 ) {
+			Util\admin_notice( "There's a problem with the API key, change the plugin options.");
+			$this->_is_ok = false;
+		}
+	}
+	
+	public function is_ok() {
+		return $this->_is_ok;
+	}
+}
+
 /**
  * Add a hook to retrieve and download a CSV file if we're on the right page.
  */
@@ -366,40 +390,29 @@ function check_for_download() {
 	// check if this is the page where we have to download a CSV file of project monthly data
     if ( $pagenow == 'options.php' && isset($_GET['page']) && $_GET['page']=='project-data' &&
 	   array_key_exists('project',$_GET) && array_key_exists('year',$_GET) && array_key_exists('month',$_GET) )
-	{
+	{		
 		// check user has permission on this project
-		if ( user_can_edit_project(wp_get_current_user(), $_GET['project']) ) {
+		$project = intval($_GET['project']);
+		if ( user_can_edit_project(wp_get_current_user(), $project) ) {
 
 			// we should download instead of following a normal process
 			$year = $_GET['year'];
 			$month = $_GET['month'];
-			$base = get_option('turp_api_url');
-			$headers = ['x-api-key'=>get_option('turp_api_key') ];
-			$api = new Util\ApiResource($base."/project/{$_GET['project']}/reports/$year/$month",$headers);
+			$api = new ApiResource("project/$project/reports/$year/$month");
 			$filename = sprintf('TURP_Reports_%d-%02d.csv', $year, $month);
-			$api->download_csv( $filename );
-			if ( $api->succeeded() ) {
-				exit();
-			} else {
-				add_action( 'admin_notices', function(){
-					$error = $api->get_wp_error();
-					$message = $error->get_message();
-					?>
-						<div class="error notice">
-							<p><?php _e( 'Could not download the CSV file: '.message, TURP_TEXT_DOMAIN ); ?></p>
-						</div>
-					<?php			
-				} );
+			
+			if ( $api->is_ok() ) {
+				$api->download_csv( $filename );
+				
+				if ( $api->succeeded() ) {
+					exit();
+				} else {
+					$api->add_errors_as_admin_notices();
+				}
 			}
 		} else {
 			// user is not permitted
-			add_action( 'admin_notices', function(){
-				?>
-					<div class="error notice">
-						<p><?php _e( "You are not permitted to download that Project's data.", TURP_TEXT_DOMAIN ); ?></p>
-					</div>
-				<?php			
-			} );
+			Util\admin_notice( "You are not permitted to download that Project's data." );
 		}
 	}
 }

@@ -68,15 +68,24 @@ function remote_post_json( $url, array $data ) {
 	}
 }
 
+function admin_notice( $message, $class = "notice-error" ) {
+	add_action( 'admin_notices', function() use ($message, $class) {
+		?>
+			<div class="notice <?php echo $class; ?>">
+				<p><?php echo $message; ?></p>
+			</div>
+		<?php			
+	} );
+}
+
+
 // Access The Urban Rat Project API ----------------------------------------------
 
 /**
  * Methods will throw a WP_Error if there's a download problem.
  */
 class ApiResource {
-	private $base = 'https://api.ratproject.org/dev';
 	private $headers = [ // specify default headers here
-		'x-api-key'=>'G6TrV0LQ322w0tURiCxPi8SCx40Ortqk1zscFTT8',
 		'User-Agent'=>'Microneer/WordPress'
 	];
 	private $api_key = '';
@@ -86,7 +95,7 @@ class ApiResource {
 
 	public function __construct( $resource = '/', $headers = [] ) {
 		$this->resource = $resource;
-		$this->url = $this->base.$resource;
+		$this->url = $resource;
 		$this->headers = array_merge($this->headers, $headers);
 	}
 	
@@ -99,6 +108,15 @@ class ApiResource {
 			'headers' => $this->headers,
 			'timeout' => 20
 		]);
+		
+		$url = $this->url;
+		add_action( 'admin_notices', function() use ($url) {
+			?>
+				<div class="notice notice-info">
+					<p>Retrieved <?php echo $url; ?></p>
+				</div>
+			<?php			
+		} );
 		
 		if ( is_wp_error($response) ) {
 			$this->error = $response;
@@ -130,6 +148,25 @@ class ApiResource {
 	 */
 	public function get_wp_error() {
 		return $this->error;
+	}
+
+	/**
+	 * Add each current error (see get_wp_error) as an admin notice with class "error notice".
+	 * Registered an 'admin_notices' action for each error.
+	 */
+	public function add_errors_as_admin_notices( ) {
+		$errors = $this->get_wp_error();
+		$messages = $errors->get_error_messages();
+		
+		add_action( 'admin_notices', function() use ($messages) {
+			foreach ($messages as $message) {
+			?>
+				<div class="error notice">
+					<p><?php echo $message; ?></p>
+				</div>
+			<?php			
+			}
+		} );
 	}
 	
 	/**
