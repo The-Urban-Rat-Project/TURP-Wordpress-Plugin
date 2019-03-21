@@ -69,7 +69,7 @@ add_action(
 		
 		add_settings_field( 
 			'turp_api_url',
-			'API endpoint',
+			'API endpoint (with trailing /)',
 			function(){ 
 				echo '<input type="url" size="60" name="turp_api_url" value="'.get_option('turp_api_url').'" />';
 			},
