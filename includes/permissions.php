@@ -244,9 +244,11 @@ function do_custom_project_columns( $column, $post_id ) {
 			// this is how it should be done: $pod = pods('project',$post_id);
 			// $pod->display('administrators');
 			$meta = get_post_meta( $post_id , 'administrators' , true );
-			$user_id = $meta['ID'];
-			$user_name = $meta['display_name'];
-			echo '<p><a href="'.get_edit_user_link($user_id).'">'.$user_name.'</a></p>';
+			if ( isset($meta['ID']) ){
+				$user_id = $meta['ID'];
+				$user_name = $meta['display_name'];
+				echo '<p><a href="'.get_edit_user_link($user_id).'">'.$user_name.'</a></p>';
+			}
 			break;
 		case 'featured_image':
 			echo the_post_thumbnail( 'thumbnail' );
