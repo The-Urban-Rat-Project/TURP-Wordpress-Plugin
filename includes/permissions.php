@@ -304,7 +304,7 @@ class Monthly_Data_Table extends \WP_List_Table {
 		return [
 			'year' => 'Year',
 			'month' => 'Month',
-			'count' => 'Report Count',
+			'reports' => 'Reports',
 			'download' => 'Download'
 		];
 	}
@@ -341,7 +341,7 @@ function do_project_data_page( ) {
 	<?php
 	$base = get_option('turp_api_url');
 	$headers = ['x-api-key'=>get_option('turp_api_key') ];
-	$api = new Util\ApiResource($base.'/project/'.$id.'/reports/by-month', $headers);
+	$api = new Util\ApiResource($base.'/project/'.$id.'/stats/by-month', $headers);
 	$data = $api->get_json();
 	if ( $api->succeeded() ) {
 		$table = new Monthly_Data_Table( $data );
